@@ -12,7 +12,7 @@ namespace tx1
         {
             List<Surgeon> danhSach = new List<Surgeon>();
             int chon;
-            Surgeon sr1 = new Surgeon("123", "Hoang", "Nam", "Da khoa", 12, "09876589", "Chan doan", 20);
+            //Surgeon sr1 = new Surgeon("123", "Hoang", "Nam", "Da khoa", 12, "09876589", "Chan doan", 20);
             Surgeon sr2 = new Surgeon("124", "Van", "Nam", "Da khoa", 12, "09876589", "Chan doan", 10);
             Surgeon sr3 = new Surgeon("125", "Truong", "Nam", "Da khoa", 12, "09876589", "Chan doan", 30);
             danhSach.Add(sr1);
