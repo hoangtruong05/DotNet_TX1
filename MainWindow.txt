@@ -1,0 +1,328 @@
+// MainWindow.xaml
+
+<Window x:Class="DeBenhNhan.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DeBenhNhan"
+        mc:Ignorable="d"
+        Title="Thi kết thúc học phần" Height="450" Width="800" FontFamily="Times New Roman" FontSize="18"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="auto"/>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Label Content="Quản lý bệnh nhân" FontSize="20" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" Grid.Column="1"/>
+        <Label Content="Mã bệnh nhân: " HorizontalAlignment="Left" Grid.Row="1" VerticalAlignment="Center" Height="31" Width="122"/>
+        <TextBox x:Name="txtMaBenhNhan" Grid.Column="1" HorizontalAlignment="Left" Grid.Row="1" TextWrapping="Wrap" VerticalAlignment="Center" Width="120" Height="23"/>
+
+        <Label Content="Họ tên: " HorizontalAlignment="Left" Grid.Row="2" VerticalAlignment="Center" Height="30" Width="68"/>
+        <TextBox x:Name="txtHoTen" Grid.Column="1" HorizontalAlignment="Left" Grid.Row="2" TextWrapping="Wrap" VerticalAlignment="Center" Width="200
+" Height="22"/>
+
+        <Label Content="Địa chỉ: " HorizontalAlignment="Left" Grid.Row="3" VerticalAlignment="Center" Height="31" Width="72"/>
+        <TextBox x:Name="txtDiaChi" Grid.Column="1" HorizontalAlignment="Left" Grid.Row="3" TextWrapping="Wrap" VerticalAlignment="Center" Width="120" Height="23"/>
+
+        <Label Content="Số ngày nằm viện: " HorizontalAlignment="Left" Grid.Row="4" VerticalAlignment="Center" Height="31" Width="149"/>
+        <TextBox x:Name="txtSoNgayNamVien" Grid.Column="1" HorizontalAlignment="Left" Grid.Row="4" TextWrapping="Wrap" VerticalAlignment="Center" Width="120" Height="23"/>
+
+        <Label Content="Khoa khám: " HorizontalAlignment="Left" Grid.Row="5" VerticalAlignment="Center" Height="30" Width="103"/>
+        <ComboBox x:Name="cboKhoaKham" Grid.Column="1" HorizontalAlignment="Left" Grid.Row="5" VerticalAlignment="Center" Width="120" Height="26"/>
+
+        <DataGrid x:Name="dgHienThi" Grid.Row="6" Grid.ColumnSpan="2" 
+                  AutoGenerateColumns="False" ColumnWidth="*"
+                  SelectionChanged="dgBenhNhan_SelectionChanged">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Mã bệnh nhân" Binding="{Binding Mabn}"/>
+                <DataGridTextColumn Header="Họ tên" Binding="{Binding Hoten}"/>
+                <DataGridTextColumn Header="Mã khoa" Binding="{Binding Makhoa}"/>
+                <DataGridTextColumn Header="Địa chỉ" Binding="{Binding Diachi}"/>
+                <DataGridTextColumn Header="Số ngày nằm viện" Binding="{Binding SongayNv}"/>
+                <DataGridTextColumn Header="Viện phí" Binding="{Binding VienPhi, StringFormat=N0}" CellStyle="{StaticResource vienPhiTemp}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+        <StackPanel Grid.Row="7" Orientation="Horizontal" VerticalAlignment="Center" HorizontalAlignment="Center" Grid.ColumnSpan="2" >
+            <Button Template="{StaticResource btnTemp}" x:Name="btnThem" Width="70" Height="30" Margin="10" Content="Thêm" Click="btnThem_Click"/>
+            <Button Template="{StaticResource btnTemp}" x:Name="btnSua" Width="70" Height="30" Margin="10" Content="Sửa" Click="btnSua_Click"/>
+            <Button Template="{StaticResource btnTemp}" x:Name="btnXoa" Width="70" Height="30" Margin="10" Content="Xóa" Click="btnXoa_Click"/>
+            <Button Template="{StaticResource btnTemp}" x:Name="btnThongKe" Width="80" Height="30" Margin="10" Content="Thống kê" Click="btnThongKe_Click"/>
+        </StackPanel>
+    </Grid>
+    
+</Window>
+
+//MainWindow.xaml.cs
+
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Data;
+using System.Windows.Documents;
+using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
+using System.Windows.Navigation;
+using System.Windows.Shapes;
+using DeBenhNhan.Models;
+
+namespace DeBenhNhan
+{
+    /// <summary>
+    /// Interaction logic for MainWindow.xaml
+    /// </summary>
+    public partial class MainWindow : Window
+    {
+        public MainWindow()
+        {
+            InitializeComponent();
+        }
+        QlbenhNhanContext db = new QlbenhNhanContext();
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            HienThiBD();
+            HienThiCB();
+            //Scaffold-DbContext "Data Source=LAPTOP-PREP3IJM\SQLEXPRESS;Initial Catalog=QLBenhNhan;Integrated Security=True;Encrypt=True;Trust Server Certificate=True"
+            //Microsoft.EntityFrameworkCore.SqlServer -OutputDir Models
+        }
+
+        private void HienThiBD()
+        {
+            dgHienThi.ItemsSource = db.BenhNhans.Where(x => x.SongayNv <=20)
+                                                .OrderByDescending(x=>x.SongayNv)  
+                                                .Select(x =>new
+                                                 {
+                                                     x.Mabn,
+                                                     x.Hoten,
+                                                     x.Diachi,
+                                                     x.Makhoa,
+                                                     x.SongayNv,
+                                                     VienPhi = x.SongayNv * 60000
+                                                 }).ToList();
+        }
+
+        private void HienThiCB()
+        {
+            cboKhoaKham.ItemsSource = db.KhoaKhams.Select(x =>x).ToList();
+            cboKhoaKham.DisplayMemberPath = "Tenkhoa";
+            cboKhoaKham.SelectedValuePath = "Makhoa";
+            cboKhoaKham.SelectedIndex = 0;
+        }
+        private void dgBenhNhan_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (dgHienThi.SelectedItem != null)
+            {
+                dynamic b = dgHienThi.SelectedItem;
+
+                txtMaBenhNhan.Text = b.Mabn;
+                txtHoTen.Text = b.Hoten;
+                txtDiaChi.Text = b.Diachi;
+                txtSoNgayNamVien.Text = b.SongayNv.ToString();
+                cboKhoaKham.SelectedValue = b.Makhoa;
+            }
+        }
+        private bool isCheck()
+        {
+            if (txtMaBenhNhan.Text.Trim() == "" ||
+               txtHoTen.Text.Trim() == "" ||
+               txtDiaChi.Text.Trim() == "" ||
+               txtSoNgayNamVien.Text.Trim() == "" ||
+               cboKhoaKham.SelectedIndex == -1)
+            {
+                MessageBox.Show("Khong duoc de trong truong thong tin!!!", "Thong Bao", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+            if (!int.TryParse(txtSoNgayNamVien.Text.Trim(), out int soNgayNamVien) || soNgayNamVien <= 0)
+            {
+                MessageBox.Show("Vui long nhap lai so ngay nam vien!", "Thong bao", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+            return true;
+        }
+        private void btnThem_Click(object sender, RoutedEventArgs e)
+        {
+            var x = db.BenhNhans.SingleOrDefault(x => x.Mabn == txtMaBenhNhan.Text);
+            if(x!=null)
+            {
+                MessageBox.Show("Ma thuoc da ton tai!!!");
+                return;
+            }
+
+            else
+            {
+                try
+                {
+                    if (isCheck())
+                    {
+                        BenhNhan b = new BenhNhan();
+
+                        b.Mabn = txtMaBenhNhan.Text;
+                        b.Hoten = txtHoTen.Text;
+                        b.Diachi = txtDiaChi.Text;
+                        b.SongayNv = int.Parse(txtSoNgayNamVien.Text);
+                        KhoaKham y = (KhoaKham)cboKhoaKham.SelectedItem;
+                        b.Makhoa = y.Makhoa;
+                        db.BenhNhans.Add(b);
+                        db.SaveChanges();
+                        HienThiBD();
+                        //dgHienThi.Items.Refresh();
+                        MessageBox.Show("Them benh nhan thanh cong!"); 
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Them benh nhan khong thanh cong!");
+                }
+            }
+        }
+
+        
+
+        private void btnSua_Click(object sender, RoutedEventArgs e)
+        {
+            var x = db.BenhNhans.SingleOrDefault(x => x.Mabn == txtMaBenhNhan.Text);
+            if (x == null)
+            {
+                MessageBox.Show("Khong tim thay benh nhan!!!");
+                return;
+            }
+
+            else
+            {
+                try
+                {
+                    if (isCheck())
+                    {
+                                           
+                        x.Hoten = txtHoTen.Text;
+                        x.Diachi = txtDiaChi.Text;
+                        x.SongayNv = int.Parse(txtSoNgayNamVien.Text);
+                        KhoaKham y = (KhoaKham)cboKhoaKham.SelectedItem;
+                        x.Makhoa = y.Makhoa;
+                        db.SaveChanges();
+                        HienThiBD();
+                        MessageBox.Show("Sua benh nhan thanh cong!");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("Sua benh nhan khong thanh cong!");
+                }
+            }
+        }
+
+        private void btnXoa_Click(object sender, RoutedEventArgs e)
+        {
+            var bnXoa = db.BenhNhans.Find(txtMaBenhNhan.Text);
+            if (bnXoa != null)
+            {
+                MessageBoxResult rs = MessageBox.Show("ban co chac chan muon xoa", "Xac nhan", MessageBoxButton.YesNo);
+                if (rs == MessageBoxResult.Yes)
+                {
+                    db.Remove(bnXoa);
+                    db.SaveChanges();
+                    HienThiBD();
+                }
+            }
+        }
+
+        private void btnThongKe_Click(object sender, RoutedEventArgs e)
+        {
+            new ThongKe().Show();
+        }
+    }
+}
+
+App.xaml
+
+<Application x:Class="DeBenhNhan.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:DeBenhNhan"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <Style TargetType="{x:Type TextBox}">
+            <Setter Property="FontFamily" Value="Times New Roman"/>
+            <Setter Property="Foreground" Value="Blue"/>
+        </Style>
+
+        <ControlTemplate x:Key="btnTemp" TargetType="{x:Type Button}">
+            <Grid>
+                <Ellipse Fill="YellowGreen"/>
+                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Grid>
+        </ControlTemplate>
+
+        <Style TargetType="{x:Type DataGridColumnHeader}">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style TargetType="DataGridCell" x:Key="vienPhiTemp">
+            <Setter Property="HorizontalContentAlignment" Value="Right"/>
+            <Setter Property="FontStyle" Value="Italic"/>
+            <Setter Property="Foreground" Value="Red"/>
+        </Style>
+    </Application.Resources>
+</Application>
+
+
+ThongKe.xaml
+
+<Window x:Class="DeBenhNhan.ThongKe"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:DeBenhNhan"
+        mc:Ignorable="d"
+        Title="ThongKe" Height="450" Width="600"
+        WindowStartupLocation="CenterScreen"
+        Loaded="Window_Loaded">
+    <Grid>
+        <DataGrid x:Name="dgHienThi" Grid.Row="6" Grid.ColumnSpan="2" 
+          AutoGenerateColumns="False" ColumnWidth="*">
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Mã khoa" Binding="{Binding MaKhoa}"/>
+                <DataGridTextColumn Header="Tên khoa" Binding="{Binding TenKhoa}"/>
+                <DataGridTextColumn Header="Tổng Viện phí" Binding="{Binding TongVienPhi, StringFormat=N0}" CellStyle="{StaticResource vienPhiTemp}"/>
+            </DataGrid.Columns>
+        </DataGrid>
+    </Grid>
+</Window>
+
+ThongKe.xaml.cs
+
+public partial class ThongKe : Window
+{
+    public ThongKe()
+    {
+        InitializeComponent();
+    }
+    QlbenhNhanContext db = new QlbenhNhanContext();
+    private void Window_Loaded(object sender, RoutedEventArgs e)
+    {
+        dgHienThi.ItemsSource = (from bn in db.BenhNhans
+                                    join kk in db.KhoaKhams
+                                    on bn.Makhoa equals kk.Makhoa
+                                    group bn by new {kk.Makhoa, kk.Tenkhoa} into g
+                                    select new
+                                    {
+                                        MaKhoa = g.Key.Makhoa,
+                                        TenKhoa = g.Key.Tenkhoa,
+                                        TongVienPhi = g.Sum(bn => bn.SongayNv * 60000)
+                                    }).ToList();
+    }
+}
