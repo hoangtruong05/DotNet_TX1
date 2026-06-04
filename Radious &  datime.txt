@@ -1,0 +1,185 @@
+Bước 1: Cập nhật giao diện MainWindow.xaml
+Bạn cần thêm hàng (Row) trong Grid.RowDefinitions , bổ sung các điều khiển RadioButton, DatePicker và cấu hình thêm cột hiển thị trên DataGrid.  
+
+1. Thêm dòng định dạng layout
+Trong thẻ <Grid.RowDefinitions>, bạn hãy copy đè đoạn sau (tăng thêm số hàng từ 8 lên 10 hàng để chứa các ô mới):  
+
+
+XML
+<Grid.RowDefinitions>
+    <RowDefinition Height="auto"/> <RowDefinition Height="auto"/> <RowDefinition Height="auto"/> <RowDefinition Height="auto"/> <RowDefinition Height="auto"/> <RowDefinition Height="auto"/> <RowDefinition Height="auto"/> <RowDefinition Height="*"/>    <RowDefinition Height="auto"/> </Grid.RowDefinitions>
+2. Chèn RadioButton và DatePicker vào vùng nhập liệu
+Bạn tìm đến vị trí dưới ô Địa chỉ (txtDiaChi) và phía trên ô Khoa khám (cboKhoaKham), chèn thêm đoạn code XAML này vào:  
+
+XML
+<Label Content="Giới tính: " HorizontalAlignment="Left" Grid.Row="4" VerticalAlignment="Center"/>
+<StackPanel Orientation="Horizontal" Grid.Column="1" Grid.Row="4" VerticalAlignment="Center">
+    <RadioButton x:Name="rdoNam" Content="Nam" IsChecked="True" Margin="0,0,20,0" VerticalAlignment="Center"/>
+    <RadioButton x:Name="rdoNu" Content="Nữ" VerticalAlignment="Center"/>
+</StackPanel>
+
+<Label Content="Ngày nhập viện: " HorizontalAlignment="Left" Grid.Row="5" VerticalAlignment="Center"/>
+<DatePicker x:Name="dtpNgayNhapVien" Grid.Column="1" Grid.Row="5" HorizontalAlignment="Left" VerticalAlignment="Center" Width="150" Height="26"/>
+
+(Lưu ý: Vì đã chèn thêm 2 dòng mới, bạn hãy tìm đến thẻ <Label Content="Khoa khám: "...> cũ , ô <ComboBox x:Name="cboKhoaKham"...> cũ , ô <DataGrid x:Name="dgHienThi"...> cũ và <StackPanel> chứa các nút bấm cũ  để sửa lại chỉ số Grid.Row tăng tiến lên 2 đơn vị tương ứng là Grid.Row="6", Grid.Row="7", và Grid.Row="8" để giao diện không bị đè đè lên nhau).  
+
+3. Thêm cột hiển thị Giới tính và Ngày nhập viện vào DataGrid
+Tại khối <DataGrid.Columns> , bạn bổ sung thêm các cột văn bản để hiển thị thông tin này lên màn hình:  
+
+
+XML
+<DataGrid.Columns>
+    <DataGridTextColumn Header="Mã bệnh nhân" Binding="{Binding Mabn}"/>
+    <DataGridTextColumn Header="Họ tên" Binding="{Binding Hoten}"/>
+    <DataGridTextColumn Header="Giới tính" Binding="{Binding GioiTinhHienThi}"/> <DataGridTextColumn Header="Địa chỉ" Binding="{Binding Diachi}"/>
+    <DataGridTextColumn Header="Ngày nhập viện" Binding="{Binding NgayNhapVien, StringFormat=\{0:dd/MM/yyyy\}}"/> <DataGridTextColumn Header="Số ngày nằm viện" Binding="{Binding SongayNv}"/>
+    <DataGridTextColumn Header="Mã khoa" Binding="{Binding Makhoa}"/>
+    <DataGridTextColumn Header="Viện phí" Binding="{Binding VienPhi, StringFormat=N0}" CellStyle="{StaticResource vienPhiTemp}"/>
+</DataGrid.Columns>
+💻 Bước 2: Sửa đổi Logic xử lý C# MainWindow.xaml.cs
+Bây giờ chúng ta sẽ lập trình thuật toán lấy ngày hiện tại trừ đi ngày nhập viện để tự tính toán số ngày lưu trú.  
+TXT
+
+1. Hàm hiển thị danh sách HienThiBD()
+Chúng ta sử dụng cấu trúc động (Anonymous Type) sẵn có của bạn để chuyển đổi trực tiếp giá trị bool thành chuỗi "Nam"/"Nữ", đồng thời tính toán số ngày nằm viện bằng thuộc tính chênh lệch thời gian thời gian thực (DateTime.Now - x.NgayNhapVien).Days:  
+TXT
+
+C#
+private void HienThiBD()
+{
+    dgHienThi.ItemsSource = db.BenhNhans
+        // Bạn có thể giữ nguyên hoặc bỏ điều kiện Where tùy theo yêu cầu của đề mới
+        .Where(x => (DateTime.Now - x.NgayNhapVien).Days <= 20) 
+        .ToList() // Ép kiểu về List trước để xử lý chuỗi và tính toán mượt mà trên bộ nhớ RAM
+        .Select(x => new
+        {
+            x.Mabn,
+            x.Hoten,
+            x.Diachi,
+            x.Makhoa,
+            NgayNhapVien = x.NgayNhapVien,
+            // Thuật toán: Lấy ngày hiện tại trừ ngày nhập viện, dùng .Days để lấy ra số nguyên số ngày
+            SongayNv = (DateTime.Now - x.NgayNhapVien).Days <= 0 ? 1 : (DateTime.Now - x.NgayNhapVien).Days, 
+            // Chuyển đổi dữ liệu true/false thành chữ Nam/Nữ hiển thị trực quan lên bảng
+            GioiTinhHienThi = x.GioiTinh == true ? "Nam" : "Nữ",
+            // Tính toán viện phí động dựa trên số ngày vừa tính ra ở trên
+            VienPhi = ((DateTime.Now - x.NgayNhapVien).Days <= 0 ? 1 : (DateTime.Now - x.NgayNhapVien).Days) * 60000
+        })
+        [cite_start].OrderByDescending(x => x.SongayNv) // Đảm bảo sắp xếp giảm dần theo số ngày nằm viện thực tế [cite: 16]
+        .ToList();
+}
+2. Sự kiện Click dòng bảng dgBenhNhan_SelectionChanged
+Khi người dùng chọn dòng , chúng ta hiển thị ngược lại trạng thái tích chọn cho RadioButton và ô chọn lịch DatePicker:  
+
+
+C#
+private void dgBenhNhan_SelectionChanged(object sender, SelectionChangedEventArgs e)
+{
+    if (dgHienThi.SelectedItem != null)
+    {
+        dynamic b = dgHienThi.SelectedItem;
+        txtMaBenhNhan.Text = b.Mabn;
+        txtHoTen.Text = b.Hoten;
+        txtDiaChi.Text = b.Diachi;
+        
+        // Hiển thị ngày nhập viện lên ô chọn lịch
+        dtpNgayNhapVien.SelectedDate = b.NgayNhapVien;
+        
+        // Hiển thị giới tính lên RadioButton
+        if (b.GioiTinhHienThi == "Nam")
+            rdoNam.IsChecked = true;
+        else
+            rdoNu.IsChecked = true;
+
+        cboKhoaKham.SelectedValue = b.Makhoa;
+    }
+}
+3. Hàm kiểm tra dữ liệu đầu vào isCheck()
+Vì số ngày nằm viện giờ đây đã được tự động tính toán bằng lịch, bạn không cần kiểm tra số ngày ở ô TextBox nữa. Thay vào đó, bạn chỉ cần kiểm tra xem người dùng đã chọn ngày nhập viện trên lịch hay chưa:  
+
+
+C#
+private bool isCheck()
+{
+    if (txtMaBenhNhan.Text.Trim() == "" ||
+        txtHoTen.Text.Trim() == "" ||
+        txtDiaChi.Text.Trim() == "" ||
+        dtpNgayNhapVien.SelectedDate == null || // Kiểm tra lịch không được bỏ trống
+        cboKhoaKham.SelectedIndex == -1)
+    {
+        MessageBox.Show("Không được để trống trường thông tin!!!", "Thông Báo", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return false;
+    }
+    
+    if (dtpNgayNhapVien.SelectedDate > DateTime.Now)
+    {
+        MessageBox.Show("Ngày nhập viện không thể lớn hơn ngày hiện tại!", "Thông báo", MessageBoxButton.OK, MessageBoxImage.Error);
+        return false;
+    }
+    return true;
+}
+4. Hàm Sửa đổi logic nút Thêm btnThem_Click
+Trong khối gán dữ liệu thực thể b để lưu xuống cơ sở dữ liệu:  
+TXT
+
+C#
+[cite_start]// ... Đoạn kiểm tra trùng khóa và kiểm tra trống (isCheck) giữ nguyên cấu trúc của bạn [cite: 28, 29]
+try
+{
+    if (isCheck())
+    {
+        [cite_start]BenhNhan b = new BenhNhan(); [cite: 31]
+        [cite_start]b.Mabn = txtMaBenhNhan.Text; [cite: 32]
+        b.Hoten = txtHoTen.Text;
+        b.Diachi = txtDiaChi.Text;
+        
+        // 1. Gán giá trị ngày từ DatePicker vào thuộc tính thực thể
+        b.NgayNhapVien = dtpNgayNhapVien.SelectedDate.Value;
+        
+        // 2. Gán giá trị giới tính từ việc check trạng thái RadioButton Nam
+        b.GioiTinh = rdoNam.IsChecked == true ? true : false;
+
+        KhoaKham y = (KhoaKham)cboKhoaKham.SelectedItem;
+        b.Makhoa = y.Makhoa;
+        
+        db.BenhNhans.Add(b);
+        [cite_start]db.SaveChanges(); [cite: 33]
+        HienThiBD();
+        dgHienThi.Items.Refresh(); // Đảm bảo làm mới luồng dữ liệu Anonymous Type
+        MessageBox.Show("Thêm bệnh nhân thành công!");
+    }
+}
+catch (Exception ex)
+{
+    [cite_start]MessageBox.Show("Thêm bệnh nhân không thành công!"); [cite: 34]
+}
+5. Hàm Sửa đổi logic nút Sửa btnSua_Click
+Tương tự như hàm Thêm, tại khối gán dữ liệu cập nhật cho đối tượng thực thể tìm thấy:  
+TXT
+
+C#
+[cite_start]// ... Đoạn bẫy lỗi null giữ nguyên cấu trúc kiểm tra của bạn [cite: 35, 36]
+try
+{
+    if (isCheck())
+    {
+        [cite_start]x.Hoten = txtHoTen.Text; [cite: 37]
+        [cite_start]x.Diachi = txtDiaChi.Text; [cite: 38]
+        
+        // Cập nhật thuộc tính mới theo lịch và RadioButton
+        x.NgayNhapVien = dtpNgayNhapVien.SelectedDate.Value;
+        x.GioiTinh = rdoNam.IsChecked == true ? true : false;
+
+        KhoaKham y = (KhoaKham)cboKhoaKham.SelectedItem;
+        x.Makhoa = y.Makhoa;
+        
+        db.SaveChanges();
+        HienThiBD();
+        dgHienThi.Items.Refresh();
+        [cite_start]MessageBox.Show("Sửa bệnh nhân thành công!"); [cite: 39]
+    }
+}
+catch (Exception ex)
+{
+    [cite_start]MessageBox.Show("Sửa bệnh nhân không thành công!"); [cite: 40]
+}
